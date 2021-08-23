@@ -1,0 +1,955 @@
+---
+title: "Workflow and Data Visualization"
+
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: xaringan-themer.css
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9'
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+library(tidyverse)
+library(flair)
+library(palmerpenguins)
+```
+
+```{r xaringan-themer, include=FALSE}
+library(xaringanthemer)
+style_duo(
+  primary_color = "#26116c",
+  secondary_color = "#fd5e53",
+  title_slide_text_color = "#fff8e7",
+  header_font_google = google_font("Roboto"),
+  text_font_google   = google_font("Roboto Condensed"),
+  code_font_google   = google_font("Droid Mono")
+)
+```
+
+## Principles of Reproducibility
+
+The idea:  You should be able to send your project to someone else, and they can jump in and start working right away.
+
+1. Files are organized and well-named.
+
+2. References to data and code work for everyone.
+
+3. Package dependency is clear.
+
+4. Code will run the same every time, even if data values change.
+
+5. Analysis process is well-explained and easy to read.
+
+```{r, include = FALSE}
+library(tidyverse)
+```
+
+---
+# Dealing with Directories
+
+
+- Your **working directory** is the folder that R "thinks" it lives in at the moment.
+
+```{r getwd}
+getwd()
+```
+
+- If you save things you have created, they save to your working directory by default.
+
+
+---
+
+## The beauty of R Projects
+
+An **R Project** is basically a "flag" planted in a certain directory.
+
+When you double click a **.Rproj** file, it does two things:
+
+1. Open RStudio
+
+2. Set the working directory to be wherever the .Rproj file lives.
+
+3. Link to GitHub, if setup.
+
+--
+This is great for reproducibility!  
+
+Anyone can copy your directory, and the .Rproj will open properly on their computer.
+
+---
+class: center, middle
+
+# Set up your RProj
+
+In RStudio, choose `File > New Project`.
+
+(Save any files you need to.)
+
+Choose **new directory** and create a new folder.
+
+--
+
+Close **all** of your RStudio windows.
+
+Go to your new folder.
+
+Double click the **.Rproj** file (it looks like a cube!)
+
+--
+
+**You should ALWAYS access your work this way from now on!**
+
+---
+# Bad practice
+
+If you put something like this at the top of your .Rmd file, that is not great:
+
+```{r setwd, eval = FALSE}
+setwd("/User/hglanz/Dropbox/Teaching/Workshop/Data/")
+```
+
+- Setting working directory by hand = BAD!  
+
+--
+
+- That directory is specific to you!  Where should someone else look for the data?
+
+--
+
+- Markdown files won't knit this code.
+
+---
+class: center, middle, inverse
+
+# Dealing with packages
+
+---
+
+## install.packages()
+
+To use a package, it must first be *installed* to your copy of RStudio.
+
+This only needs to happen **ONCE** per computer or server.
+
+```{r install packages, eval = FALSE}
+install.packages("tidyverse")
+```
+
+--
+
+## update.packages()
+
+If a computer you are using has the package, but you aren't sure if it's up to date:
+
+```{r update packages, eval = FALSE}
+update.packages("tidyverse")
+```
+
+to install the most recent version.
+
+---
+class: center,middle
+# NEVER EVER EVER EVER PUT "install.packages" or "update.packages" INTO YOUR R MARKDOWN FILE!!!!!
+
+---
+
+# library() and require()
+
+- A package must only be *installed* once.
+
+- But it must be *loaded* every time, to tell R it is needed for this analysis.
+
+- `library` gives an **error** if the package isn't installed
+
+- `require` gives a `TRUE/FALSE` value depending on if the package was available
+
+- For now, you should always use `library`
+
+```{r library, eval = FALSE}
+library(tidyverse)
+
+# notice:  no quotes around package name
+```
+
+---
+class: center, middle
+
+# Three annoying complications of packages
+
+---
+
+## Versions
+
+- From time to time, packages get updated
+
+- This is good!
+
+- But, it can mess with your code, which depended on the older version.
+
+- No magic answer; just be aware.
+
+- Typically, 
+
+    + package 1.0.1 to 1.0.2 is a non-breaking change
+    + package 1.1.0 to 1.2.0 is a non-breaking change with warnings
+    + package 1.0.0 to 2.0.0 is a breaking change
+
+
+---
+
+## Dependencies
+
+- A *dependency* is when one package makes use of another.
+
+- For example, if you create a package that uses the function `group_by()`, your package **depends** on `dplyr`
+
+- Typically these get loaded automatically!
+
+- Occasionally, something goes weird and you need to manually install the dependency.
+
+
+---
+
+
+## Conflicts
+
+- Sometimes, packages choose the same name for their functions.  This is called a *conflict*.
+
+- The version loaded first takes precedence.  For example...
+
+```{r conflicts1, message = FALSE}
+dat <- data.frame(bob = 1:10, joe = 11:20)
+
+library(MASS)
+library(dplyr)
+```
+
+```{r, error = TRUE}
+dat %>% select(bob)
+```
+
+---
+## Conflicts
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+detach("package:dplyr", unload=TRUE)
+detach("package:MASS", unload=TRUE)
+```
+
+```{r conflicts2, message = FALSE, warning = F}
+dat <- data.frame(bob = 1:10, joe = 11:20)
+
+library(dplyr)
+library(MASS)
+```
+
+```{r, error = TRUE}
+dat %>% select(bob)
+```
+
+---
+
+## Conflicts
+
+But this is super annoying, because...
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+detach("package:dplyr", unload=TRUE)
+detach("package:MASS", unload=TRUE)
+```
+
+```{r conflicts3, eval = FALSE}
+dat <- data.frame(bob = 1:10, joe = 11:20)
+
+library(dplyr)  # dplyr loaded here
+library(MASS)
+library(dplyr)  # does nothing, because it sees we already have dplyr
+```
+
+```{r, error = TRUE}
+dat %>% select(bob)
+```
+
+---
+
+# Conflicts
+
+ARG!
+
+Best solution:  Be explicit about your intended package using `::`.
+
+```{r conflicts4, message = FALSE, eval = FALSE}
+dat <- data.frame(bob = 1:10, joe = 11:20)
+
+library(dplyr) 
+library(MASS)
+
+dat %>% dplyr::select(bob)
+```
+
+--
+
+Another solution: The `conflicted` package
+
+```{r, warning = F}
+library(conflicted)
+
+conflict_prefer("select", "dplyr")
+```
+
+---
+class: center, middle, invert
+# Deliverables in R Markdown
+
+---
+# General principles
+
+- Give your file a good title, author, and date
+
+- Name your file something meaningful (match the title!)
+
+- Use `#` to make section headings etc.
+
+- Each code chunk is a unified thought.
+
+- Text before and after each code chunk to motivate your code and explain the output.
+
+- Make deliberate decisions about what to display:
+    + Does the reader need to see data loading step?
+    + Does the reader need to see your code?
+    + Does the reader need to see the output?
+
+---
+
+---  
+
+## Naming code chunks
+
+- Lets you jump between chunks
+
+- Careful with copy-pasting, duplicate names are not allowed.
+
+(demo)
+
+---
+# Setting chunk options
+
+- `echo`: Should this code be **shown** (echoed)?
+
+- `eval`: Should this code be **run** (evaluated)?
+
+- `include`: Should this code be neither shown nor run?
+
+- `error`: If there is an error, should that display rather than breaking the knit?
+
+- `warning`: If there is a warning, should that display?
+
+- `message`: If there is a message, should that display?
+
+---
+## Setting options for ALL chunks
+
+What does this do?
+
+```{r global_options, eval=FALSE}
+knitr::opts_chunk$set(fig.width=6, fig.height=4,
+                      echo=TRUE, warning=FALSE, 
+                      message=FALSE, eval=TRUE)
+```
+
+
+- (you can always override these for individual chunks)
+
+---
+
+class: center, middle
+
+# Data Visualization: The Grammar of Graphics
+
+---
+## Grammar of Graphics
+
+
+
+The **grammar of graphics** is a framework for creating data visualizations.
+
+--
+
+A visualization consists of:
+
+* The **aesthetic**:  Which *variables* are dictacting which *plot elements*.
+
+* The **geometry**:  What *shape* of plot you are making.
+
+---
+## Grammar of Graphics
+
+For example:
+
+.pull-left[
+The **aesthetic** is `species` on the x-axis, `bill_length_mm` on the y-axis, colored by `species`.
+
+
+The **geometry** is a **boxplot**.
+
+]
+
+.pull-right[
+
+```{r, echo = F, message = F, warning = F}
+library(dplyr)
+conflict_prefer("filter", "dplyr")
+```
+
+```{r plot, echo = FALSE, warning = F, message = F}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm, fill = species)) +
+  geom_boxplot()
+```
+]
+
+---
+## ggplot
+
+The package `ggplot2` implements the *grammar of graphics* in R.
+
+--
+
+Code for the previous example:
+
+```{r, echo = FALSE, warning = F}
+decorate("plot") %>%
+  flair("ggplot")
+```
+---
+## The aesthetic:
+
+```{r, echo = FALSE, warning = F}
+decorate("plot") %>%
+  flair("aes") %>%
+  flair("x =", background = "pink") %>%
+  flair("y = ", background = "pink") %>%
+  flair("fill = ", background = "pink") %>%
+  flair("species", background = "light blue") %>%
+  flair("bill_length_mm", background = "light blue")
+```
+
+---
+## The geometry:
+
+```{r, echo = FALSE, warning = F}
+decorate("plot") %>%
+  flair("geom") %>%
+  flair("boxplot", background = "pink")
+```
+
+---
+## Other optional elements:
+
+* The **scales** of the x- and y-axes.
+
+--
+
+* The **color** of elements that are not mapped to aesthetics.
+
+--
+
+* The **theme** of the plot
+
+--
+
+... and many more!
+
+---
+## Scales
+
+.pull-left[
+```{r, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm, fill = species)) +
+  geom_boxplot() 
+```
+]
+
+.pull-right[
+
+```{r, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm, fill = species)) +
+  geom_boxplot() +
+  scale_y_reverse()
+```
+
+]
+---
+## Scales
+
+.pull-left[
+```{r plot1, echo = FALSE, warning = F}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm, fill = species)) +
+  geom_boxplot() 
+```
+]
+
+.pull-right[
+
+```{r plot2, echo = FALSE, warning = F}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm, fill = species)) +
+  geom_boxplot() +
+  scale_y_reverse()
+```
+
+]
+
+---
+## Non-aesthetic colors
+
+.pull-left[
+```{r, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm, fill = species)) +
+  geom_boxplot() 
+```
+]
+
+.pull-right[
+
+```{r, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm)) +
+  geom_boxplot(fill = "cornflowerblue")
+```
+]
+
+---
+## Non-aesthetic colors
+
+.pull-left[
+```{r, echo = FALSE, warning = F}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm, fill = species)) +
+  geom_boxplot() 
+```
+]
+
+.pull-right[
+
+```{r, echo = FALSE, warning = F}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm)) +
+  geom_boxplot(fill = "cornflowerblue")
+```
+]
+---
+## Quick quiz
+
+What will this show?
+
+```{r, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm, fill = "cornflowerblue")) +
+  geom_boxplot()
+```
+---
+## Quick Quiz
+
+```{r, echo = FALSE}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm, fill = "cornflowerblue")) +
+  geom_boxplot()
+```
+
+---
+## Themes
+
+.pull-left[
+```{r, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm, fill = species)) +
+  geom_boxplot() 
+```
+]
+
+.pull-right[
+```{r, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm)) +
+  geom_boxplot() + 
+  theme_classic()
+```
+]
+
+---
+## Themes
+
+.pull-left[
+```{r, echo = FALSE, warning = F}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm, fill = species)) +
+  geom_boxplot() 
+```
+]
+
+.pull-right[
+
+```{r, echo = FALSE, warning = F}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm)) +
+  geom_boxplot() + 
+  theme_classic()
+```
+]
+
+---
+## Quick Quiz
+
+What are the **aesthetics**, **geometry**, **scales**, and other options?
+
+![](https://imgs.xkcd.com/comics/escalators.png)
+
+
+
+---
+## Resources
+
+
+* Scales:  https://ggplot2-book.org/scale-position.html
+
+
+* Themes:  https://ggplot2-book.org/polishing.html
+
+
+---
+class: center, middle, inverse
+
+# Geometries: The "Big Five"
+
+---
+## 1. Bar Plots
+
+Used for showing **counts** of a **categorical variable**:
+
+```{r}
+penguins %>%
+  ggplot(aes(x = species)) +
+  geom_bar()
+```
+
+---
+## 1. Bar Plots
+
+... or **relationships** between  **two categorical variables**:
+
+```{r}
+penguins %>%
+  ggplot(aes(x = species, fill = sex)) +
+  geom_bar()
+```
+
+---
+## 1. Bar Plots
+
+Would we rather see percents?
+
+```{r}
+penguins %>%
+  ggplot(aes(x = species, fill = island)) +
+  geom_bar(position = "fill")
+```
+
+
+---
+## 1. Bar Plots
+
+Or side-by-side?
+
+```{r}
+penguins %>%
+  ggplot(aes(x = species, fill = island)) +
+  geom_bar(position = "dodge")
+```
+
+
+---
+
+## 1.5  Column Plots
+
+If you want the height of your plot to be something **numeric**, rather than **counts**:
+
+```{r, warning = F}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm)) +
+  geom_col()
+```
+
+---
+
+
+## 1.5  Column Plots
+
+Wait - do penguins have a bill length of 6000 mm????
+
+```{r, warning = F}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm)) +
+  geom_col()
+```
+
+---
+
+
+## 1.5  Column Plots
+
+Wait - do penguins have a bill length of 6000 mm????
+
+```{r, warning = F}
+penguins %>%
+  group_by(species) %>%
+  summarize(avg_bill = mean(bill_length_mm)) %>%
+  ggplot(aes(x = species, y = avg_bill)) +
+  geom_col()
+```
+
+---
+
+```{r, echo = FALSE}
+penguins %>%
+  group_by(species) %>%
+  summarize(avg_bill = mean(bill_length_mm)) %>%
+  ggplot(aes(x = species, y = avg_bill)) +
+  geom_col()
+```
+
+---
+## 2. Boxplots
+
+```{r, warning = F}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm)) +
+  geom_boxplot()
+```
+
+---
+## 2. Boxplots
+
+Compare a second categorical:
+
+```{r, warning = F}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm, fill = sex)) +
+  geom_boxplot()
+```
+
+---
+## 2. Boxplots
+
+Compare a second categorical:
+
+```{r, warning = F}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm, fill = sex)) +
+  geom_boxplot()
+```
+
+---
+## 3. Histograms
+
+
+```{r, warning = F}
+penguins %>%
+  ggplot(aes(x = bill_length_mm)) +
+  geom_histogram()
+```
+
+
+---
+## 3. Histograms
+
+
+```{r, warning = F}
+penguins %>%
+  ggplot(aes(x = bill_length_mm)) +
+  geom_histogram(bins = 100)
+```
+
+---
+## 3. Histograms
+
+
+```{r, warning = F}
+penguins %>%
+  ggplot(aes(x = bill_length_mm)) +
+  geom_histogram(bins = 10)
+```
+---
+## 3.5 Densities
+
+Suppose you want to compare histograms by **category**:
+
+```{r}
+penguins %>%
+  ggplot(aes(x = bill_length_mm, fill = species)) +
+  geom_histogram()
+```
+
+---
+## 3.5 Densities
+
+Cleaner:  Smoothed histogram, or density:
+
+```{r}
+penguins %>%
+  ggplot(aes(x = bill_length_mm, fill = species)) +
+  geom_density()
+```
+
+---
+## 3.5 Densities
+
+Even cleaner:  The `alpha` option:
+
+```{r}
+penguins %>%
+  ggplot(aes(x = bill_length_mm, fill = species)) +
+  geom_density(alpha = 0.5)
+```
+
+---
+## 4/5 Scatterplots/line plots
+
+```{r}
+penguins %>%
+  ggplot(aes(x = bill_length_mm, y = bill_depth_mm)) +
+  geom_point()
+```
+
+---
+## 4/5 Scatterplots/line plots
+
+Colors for extra info:
+
+```{r}
+penguins %>%
+  ggplot(aes(x = bill_length_mm, y = bill_depth_mm, color = species)) +
+  geom_point()
+```
+
+---
+## 5. Line Plots
+
+```{r, warning = F}
+penguins %>%
+  group_by(species, sex) %>%
+  summarize(avg_bill = mean(bill_length_mm)) %>%
+  ggplot(aes(x = species, y = avg_bill, group = sex)) +
+  geom_point() + 
+  geom_line()
+```
+
+---
+
+```{r, echo = FALSE, warning = F}
+penguins %>%
+  group_by(species, sex) %>%
+  summarize(avg_bill = mean(bill_length_mm)) %>%
+  ggplot(aes(x = species, y = avg_bill, group = sex)) +
+  geom_point() + 
+  geom_line()
+```
+
+---
+
+## Resources:
+
+https://www.rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf
+
+![](https://image.slidesharecdn.com/ggplot2-cheatsheet-2-170605180144/95/ggplot2-cheatsheet21-1-638.jpg?cb=1496686005)
+
+<!-- --- -->
+<!-- ## Quick Quiz -->
+
+
+<!-- ```{r ggplot, include = FALSE, warning = FALSE} -->
+<!-- starwars %>% -->
+<!--   filter(species == "Human") %>% -->
+<!--   ggplot(aes(x = height, y = mass, color = gender)) +  -->
+<!--   geom_point(pch = 17) + -->
+<!--   ggtitle("Heights and Weights of Humans in Star Wars") -->
+<!-- ``` -->
+
+<!-- ```{r, echo = FALSE, warning = FALSE} -->
+<!-- decorate("ggplot") %>% -->
+<!--   mask("filter ", background = "#fdff32")%>% -->
+<!--   mask("x ", background = "#fdff32") %>% -->
+<!--   mask("y ", background = "#fdff32") %>% -->
+<!--   mask("color", background = "#fdff32") %>% -->
+<!--   mask("pch ", background = "#fdff32") %>% -->
+<!--   mask("point", background = "#fdff32")  %>% -->
+<!--   mask("ggtitle", background = "#fdff32")  -->
+<!-- ``` -->
+
+---
+
+class: center, middle
+
+# Multiple Plots
+
+---
+## Facet Wrapping
+
+```{r}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm)) +
+  geom_boxplot() +
+  facet_wrap(~sex)
+```
+
+---
+
+
+```{r, echo = FALSE}
+penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm)) +
+  geom_boxplot() +
+  facet_wrap(~sex)
+```
+
+---
+## Patchwork
+
+```{r}
+library(patchwork)
+
+box <- penguins %>%
+  ggplot(aes(x = species, y = bill_length_mm, fill = species)) +
+  geom_boxplot()
+
+dens <- penguins %>%
+  ggplot(aes(fill = species, x = bill_length_mm)) +
+  geom_density()
+```
+
+---
+
+```{r, echo = FALSE}
+box + dens
+```
+
+---
+
+```{r, echo = FALSE}
+box / dens
+```
+
+---
+
+```{r, echo = FALSE}
+box / (dens + box)
+```

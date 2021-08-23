@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Workflow and Data Visualization</title>
+    <meta charset="utf-8" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Workflow and Data Visualization
+
+---
+
+
+
+
+
+
+## Principles of Reproducibility
+
+The idea:  You should be able to send your project to someone else, and they can jump in and start working right away.
+
+1. Files are organized and well-named.
+
+2. References to data and code work for everyone.
+
+3. Package dependency is clear.
+
+4. Code will run the same every time, even if data values change.
+
+5. Analysis process is well-explained and easy to read.
+
+
+
+---
+# Dealing with Directories
+
+
+- Your **working directory** is the folder that R "thinks" it lives in at the moment.
+
+
+```r
+getwd()
+```
+
+```
+## [1] "C:/Users/kbodwin/Dropbox/Adventures_in_R/UPS_Trainings/Day-2"
+```
+
+- If you save things you have created, they save to your working directory by default.
+
+
+---
+
+## The beauty of R Projects
+
+An **R Project** is basically a "flag" planted in a certain directory.
+
+When you double click a **.Rproj** file, it does two things:
+
+1. Open RStudio
+
+2. Set the working directory to be wherever the .Rproj file lives.
+
+3. Link to GitHub, if setup.
+
+--
+This is great for reproducibility!  
+
+Anyone can copy your directory, and the .Rproj will open properly on their computer.
+
+---
+class: center, middle
+
+# Set up your RProj
+
+In RStudio, choose `File &gt; New Project`.
+
+(Save any files you need to.)
+
+Choose **new directory** and create a new folder.
+
+--
+
+Close **all** of your RStudio windows.
+
+Go to your new folder.
+
+Double click the **.Rproj** file (it looks like a cube!)
+
+--
+
+**You should ALWAYS access your work this way from now on!**
+
+---
+# Bad practice
+
+If you put something like this at the top of your .Rmd file, that is not great:
+
+
+```r
+setwd("/User/hglanz/Dropbox/Teaching/Workshop/Data/")
+```
+
+- Setting working directory by hand = BAD!  
+
+--
+
+- That directory is specific to you!  Where should someone else look for the data?
+
+--
+
+- Markdown files won't knit this code.
+
+---
+class: center, middle, inverse
+
+# Dealing with packages
+
+---
+
+## install.packages()
+
+To use a package, it must first be *installed* to your copy of RStudio.
+
+This only needs to happen **ONCE** per computer or server.
+
+
+```r
+install.packages("tidyverse")
+```
+
+--
+
+## update.packages()
+
+If a computer you are using has the package, but you aren't sure if it's up to date:
+
+
+```r
+update.packages("tidyverse")
+```
+
+to install the most recent version.
+
+---
+class: center,middle
+# NEVER EVER EVER EVER PUT "install.packages" or "update.packages" INTO YOUR R MARKDOWN FILE!!!!!
+
+---
+
+# library() and require()
+
+- A package must only be *installed* once.
+
+- But it must be *loaded* every time, to tell R it is needed for this analysis.
+
+- `library` gives an **error** if the package isn't installed
+
+- `require` gives a `TRUE/FALSE` value depending on if the package was available
+
+- For now, you should always use `library`
+
+
+```r
+library(tidyverse)
+
+# notice:  no quotes around package name
+```
+
+---
+class: center, middle
+
+# Three annoying complications of packages
+
+---
+
+## Versions
+
+- From time to time, packages get updated
+
+- This is good!
+
+- But, it can mess with your code, which depended on the older version.
+
+- No magic answer; just be aware.
+
+- Typically, 
+
+    + package 1.0.1 to 1.0.2 is a non-breaking change
+    + package 1.1.0 to 1.2.0 is a non-breaking change with warnings
+    + package 1.0.0 to 2.0.0 is a breaking change
+
+
+---
+
+## Dependencies
+
+- A *dependency* is when one package makes use of another.
+
+- For example, if you create a package that uses the function `group_by()`, your package **depends** on `dplyr`
+
+- Typically these get loaded automatically!
+
+- Occasionally, something goes weird and you need to manually install the dependency.
+
+
+---
+
+
+## Conflicts
+
+- Sometimes, packages choose the same name for their functions.  This is called a *conflict*.
+
+- The version loaded first takes precedence.  For example...
+
+
+```r
+dat &lt;- data.frame(bob = 1:10, joe = 11:20)
+
+library(MASS)
+```
+
+```
+## Warning: package 'MASS' was built under R version 4.0.3
+```
+
+```r
+library(dplyr)
+```
+
+
+```r
+dat %&gt;% select(bob)
+```
+
+```
+## Error in select(., bob): unused argument (bob)
+```
+
+---
+## Conflicts
+
+
+
+
+```r
+dat &lt;- data.frame(bob = 1:10, joe = 11:20)
+
+library(dplyr)
+library(MASS)
+```
+
+
+```r
+dat %&gt;% select(bob)
+```
+
+```
+## Error in select(., bob): unused argument (bob)
+```
+
+---
+
+## Conflicts
+
+But this is super annoying, because...
+
+
+
+
+```r
+dat &lt;- data.frame(bob = 1:10, joe = 11:20)
+
+library(dplyr)  # dplyr loaded here
+library(MASS)
+library(dplyr)  # does nothing, because it sees we already have dplyr
+```
+
+
+```r
+dat %&gt;% select(bob)
+```
+
+```
+## Error in select(., bob): could not find function "select"
+```
+
+---
+
+# Conflicts
+
+ARG!
+
+Best solution:  Be explicit about your intended package using `::`.
+
+
+```r
+dat &lt;- data.frame(bob = 1:10, joe = 11:20)
+
+library(dplyr) 
+library(MASS)
+
+dat %&gt;% dplyr::select(bob)
+```
+
+--
+
+Another solution: The `conflicted` package
+
+
+```r
+library(conflicted)
+
+conflict_prefer("select", "dplyr")
+```
+
+```
+## [conflicted] Will prefer dplyr::select over any other package
+```
+
+---
+class: center, middle, invert
+# Deliverables in R Markdown
+
+---
+# General principles
+
+- Give your file a good title, author, and date
+
+- Name your file something meaningful (match the title!)
+
+- Use `#` to make section headings etc.
+
+- Each code chunk is a unified thought.
+
+- Text before and after each code chunk to motivate your code and explain the output.
+
+- Make deliberate decisions about what to display:
+    + Does the reader need to see data loading step?
+    + Does the reader need to see your code?
+    + Does the reader need to see the output?
+
+---
+
+---  
+
+## Naming code chunks
+
+- Lets you jump between chunks
+
+- Careful with copy-pasting, duplicate names are not allowed.
+
+(demo)
+
+---
+# Setting chunk options
+
+- `echo`: Should this code be **shown** (echoed)?
+
+- `eval`: Should this code be **run** (evaluated)?
+
+- `include`: Should this code be neither shown nor run?
+
+- `error`: If there is an error, should that display rather than breaking the knit?
+
+- `warning`: If there is a warning, should that display?
+
+- `message`: If there is a message, should that display?
+
+---
+## Setting options for ALL chunks
+
+What does this do?
+
+
+```r
+knitr::opts_chunk$set(fig.width=6, fig.height=4,
+                      echo=TRUE, warning=FALSE, 
+                      message=FALSE, eval=TRUE)
+```
+
+
+- (you can always override these for individual chunks)
+
+---
+
+class: center, middle
+
+# Data Visualization: The Grammar of Graphics
+
+---
+## Grammar of Graphics
+
+
+
+The **grammar of graphics** is a framework for creating data visualizations.
+
+--
+
+A visualization consists of:
+
+* The **aesthetic**:  Which *variables* are dictacting which *plot elements*.
+
+* The **geometry**:  What *shape* of plot you are making.
+
+---
+## Grammar of Graphics
+
+For example:
+
+.pull-left[
+The **aesthetic** is `species` on the x-axis, `bill_length_mm` on the y-axis, colored by `species`.
+
+
+The **geometry** is a **boxplot**.
+
+]
+
+.pull-right[
+
+
+
+![](01-Workflow_and_DataViz_files/figure-html/plot-1.png)&lt;!-- --&gt;
+]
+
+---
+## ggplot
+
+The package `ggplot2` implements the *grammar of graphics* in R.
+
+--
+
+Code for the previous example:
+
+
+&lt;code class ='r hljs remark-code'&gt;penguins %&gt;%&lt;br&gt;&amp;nbsp;&amp;nbsp;&lt;span style="background-color:#ffff7f"&gt;ggplot&lt;/span&gt;(aes(x = species, y = bill_length_mm, fill = species)) +&lt;br&gt;&amp;nbsp;&amp;nbsp;geom_boxplot()&lt;/code&gt;
+
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-51-1.png)&lt;!-- --&gt;
+---
+## The aesthetic:
+
+
+&lt;code class ='r hljs remark-code'&gt;penguins %&gt;%&lt;br&gt;&amp;nbsp;&amp;nbsp;ggplot(&lt;span style="background-color:#ffff7f"&gt;aes&lt;/span&gt;(&lt;span style="background-color:pink"&gt;x =&lt;/span&gt; &lt;span style="background-color:light blue"&gt;species&lt;/span&gt;, &lt;span style="background-color:pink"&gt;y = &lt;/span&gt;&lt;span style="background-color:light blue"&gt;bill_length_mm&lt;/span&gt;, &lt;span style="background-color:pink"&gt;fill = &lt;/span&gt;&lt;span style="background-color:light blue"&gt;species&lt;/span&gt;)) +&lt;br&gt;&amp;nbsp;&amp;nbsp;geom_boxplot()&lt;/code&gt;
+
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-52-1.png)&lt;!-- --&gt;
+
+---
+## The geometry:
+
+
+&lt;code class ='r hljs remark-code'&gt;penguins %&gt;%&lt;br&gt;&amp;nbsp;&amp;nbsp;ggplot(aes(x = species, y = bill_length_mm, fill = species)) +&lt;br&gt;&amp;nbsp;&amp;nbsp;&lt;span style="background-color:#ffff7f"&gt;geom&lt;/span&gt;_&lt;span style="background-color:pink"&gt;boxplot&lt;/span&gt;()&lt;/code&gt;
+
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-53-1.png)&lt;!-- --&gt;
+
+---
+## Other optional elements:
+
+* The **scales** of the x- and y-axes.
+
+--
+
+* The **color** of elements that are not mapped to aesthetics.
+
+--
+
+* The **theme** of the plot
+
+--
+
+... and many more!
+
+---
+## Scales
+
+.pull-left[
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species, y = bill_length_mm, fill = species)) +
+  geom_boxplot() 
+```
+]
+
+.pull-right[
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species, y = bill_length_mm, fill = species)) +
+  geom_boxplot() +
+  scale_y_reverse()
+```
+
+]
+---
+## Scales
+
+.pull-left[
+![](01-Workflow_and_DataViz_files/figure-html/plot1-1.png)&lt;!-- --&gt;
+]
+
+.pull-right[
+
+![](01-Workflow_and_DataViz_files/figure-html/plot2-1.png)&lt;!-- --&gt;
+
+]
+
+---
+## Non-aesthetic colors
+
+.pull-left[
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species, y = bill_length_mm, fill = species)) +
+  geom_boxplot() 
+```
+]
+
+.pull-right[
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species, y = bill_length_mm)) +
+  geom_boxplot(fill = "cornflowerblue")
+```
+]
+
+---
+## Non-aesthetic colors
+
+.pull-left[
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-16-1.png)&lt;!-- --&gt;
+]
+
+.pull-right[
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-17-1.png)&lt;!-- --&gt;
+]
+---
+## Quick quiz
+
+What will this show?
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species, y = bill_length_mm, fill = "cornflowerblue")) +
+  geom_boxplot()
+```
+---
+## Quick Quiz
+
+
+```
+## Warning: Removed 2 rows containing non-finite values (stat_boxplot).
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-19-1.png)&lt;!-- --&gt;
+
+---
+## Themes
+
+.pull-left[
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species, y = bill_length_mm, fill = species)) +
+  geom_boxplot() 
+```
+]
+
+.pull-right[
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species, y = bill_length_mm)) +
+  geom_boxplot() + 
+  theme_classic()
+```
+]
+
+---
+## Themes
+
+.pull-left[
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-22-1.png)&lt;!-- --&gt;
+]
+
+.pull-right[
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-23-1.png)&lt;!-- --&gt;
+]
+
+---
+## Quick Quiz
+
+What are the **aesthetics**, **geometry**, **scales**, and other options?
+
+![](https://imgs.xkcd.com/comics/escalators.png)
+
+
+
+---
+## Resources
+
+
+* Scales:  https://ggplot2-book.org/scale-position.html
+
+
+* Themes:  https://ggplot2-book.org/polishing.html
+
+
+---
+class: center, middle, inverse
+
+# Geometries: The "Big Five"
+
+---
+## 1. Bar Plots
+
+Used for showing **counts** of a **categorical variable**:
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species)) +
+  geom_bar()
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-24-1.png)&lt;!-- --&gt;
+
+---
+## 1. Bar Plots
+
+... or **relationships** between  **two categorical variables**:
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species, fill = sex)) +
+  geom_bar()
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-25-1.png)&lt;!-- --&gt;
+
+---
+## 1. Bar Plots
+
+Would we rather see percents?
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species, fill = island)) +
+  geom_bar(position = "fill")
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-26-1.png)&lt;!-- --&gt;
+
+
+---
+## 1. Bar Plots
+
+Or side-by-side?
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species, fill = island)) +
+  geom_bar(position = "dodge")
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-27-1.png)&lt;!-- --&gt;
+
+
+---
+
+## 1.5  Column Plots
+
+If you want the height of your plot to be something **numeric**, rather than **counts**:
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species, y = bill_length_mm)) +
+  geom_col()
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-28-1.png)&lt;!-- --&gt;
+
+---
+
+
+## 1.5  Column Plots
+
+Wait - do penguins have a bill length of 6000 mm????
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species, y = bill_length_mm)) +
+  geom_col()
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-29-1.png)&lt;!-- --&gt;
+
+---
+
+
+## 1.5  Column Plots
+
+Wait - do penguins have a bill length of 6000 mm????
+
+
+```r
+penguins %&gt;%
+  group_by(species) %&gt;%
+  summarize(avg_bill = mean(bill_length_mm)) %&gt;%
+  ggplot(aes(x = species, y = avg_bill)) +
+  geom_col()
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-30-1.png)&lt;!-- --&gt;
+
+---
+
+
+```
+## Warning: Removed 2 rows containing missing values (position_stack).
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-31-1.png)&lt;!-- --&gt;
+
+---
+## 2. Boxplots
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species, y = bill_length_mm)) +
+  geom_boxplot()
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-32-1.png)&lt;!-- --&gt;
+
+---
+## 2. Boxplots
+
+Compare a second categorical:
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species, y = bill_length_mm, fill = sex)) +
+  geom_boxplot()
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-33-1.png)&lt;!-- --&gt;
+
+---
+## 2. Boxplots
+
+Compare a second categorical:
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species, y = bill_length_mm, fill = sex)) +
+  geom_boxplot()
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-34-1.png)&lt;!-- --&gt;
+
+---
+## 3. Histograms
+
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = bill_length_mm)) +
+  geom_histogram()
+```
+
+```
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-35-1.png)&lt;!-- --&gt;
+
+
+---
+## 3. Histograms
+
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = bill_length_mm)) +
+  geom_histogram(bins = 100)
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-36-1.png)&lt;!-- --&gt;
+
+---
+## 3. Histograms
+
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = bill_length_mm)) +
+  geom_histogram(bins = 10)
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-37-1.png)&lt;!-- --&gt;
+---
+## 3.5 Densities
+
+Suppose you want to compare histograms by **category**:
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = bill_length_mm, fill = species)) +
+  geom_histogram()
+```
+
+```
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+```
+## Warning: Removed 2 rows containing non-finite values (stat_bin).
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-38-1.png)&lt;!-- --&gt;
+
+---
+## 3.5 Densities
+
+Cleaner:  Smoothed histogram, or density:
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = bill_length_mm, fill = species)) +
+  geom_density()
+```
+
+```
+## Warning: Removed 2 rows containing non-finite values (stat_density).
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-39-1.png)&lt;!-- --&gt;
+
+---
+## 3.5 Densities
+
+Even cleaner:  The `alpha` option:
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = bill_length_mm, fill = species)) +
+  geom_density(alpha = 0.5)
+```
+
+```
+## Warning: Removed 2 rows containing non-finite values (stat_density).
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-40-1.png)&lt;!-- --&gt;
+
+---
+## 4/5 Scatterplots/line plots
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = bill_length_mm, y = bill_depth_mm)) +
+  geom_point()
+```
+
+```
+## Warning: Removed 2 rows containing missing values (geom_point).
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-41-1.png)&lt;!-- --&gt;
+
+---
+## 4/5 Scatterplots/line plots
+
+Colors for extra info:
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = bill_length_mm, y = bill_depth_mm, color = species)) +
+  geom_point()
+```
+
+```
+## Warning: Removed 2 rows containing missing values (geom_point).
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-42-1.png)&lt;!-- --&gt;
+
+---
+## 5. Line Plots
+
+
+```r
+penguins %&gt;%
+  group_by(species, sex) %&gt;%
+  summarize(avg_bill = mean(bill_length_mm)) %&gt;%
+  ggplot(aes(x = species, y = avg_bill, group = sex)) +
+  geom_point() + 
+  geom_line()
+```
+
+```
+## `summarise()` has grouped output by 'species'. You can override using the `.groups` argument.
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-43-1.png)&lt;!-- --&gt;
+
+---
+
+
+```
+## `summarise()` has grouped output by 'species'. You can override using the `.groups` argument.
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-44-1.png)&lt;!-- --&gt;
+
+---
+
+## Resources:
+
+https://www.rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf
+
+![](https://image.slidesharecdn.com/ggplot2-cheatsheet-2-170605180144/95/ggplot2-cheatsheet21-1-638.jpg?cb=1496686005)
+
+&lt;!-- --- --&gt;
+&lt;!-- ## Quick Quiz --&gt;
+
+
+&lt;!-- ```{r ggplot, include = FALSE, warning = FALSE} --&gt;
+&lt;!-- starwars %&gt;% --&gt;
+&lt;!--   filter(species == "Human") %&gt;% --&gt;
+&lt;!--   ggplot(aes(x = height, y = mass, color = gender)) +  --&gt;
+&lt;!--   geom_point(pch = 17) + --&gt;
+&lt;!--   ggtitle("Heights and Weights of Humans in Star Wars") --&gt;
+&lt;!-- ``` --&gt;
+
+&lt;!-- ```{r, echo = FALSE, warning = FALSE} --&gt;
+&lt;!-- decorate("ggplot") %&gt;% --&gt;
+&lt;!--   mask("filter ", background = "#fdff32")%&gt;% --&gt;
+&lt;!--   mask("x ", background = "#fdff32") %&gt;% --&gt;
+&lt;!--   mask("y ", background = "#fdff32") %&gt;% --&gt;
+&lt;!--   mask("color", background = "#fdff32") %&gt;% --&gt;
+&lt;!--   mask("pch ", background = "#fdff32") %&gt;% --&gt;
+&lt;!--   mask("point", background = "#fdff32")  %&gt;% --&gt;
+&lt;!--   mask("ggtitle", background = "#fdff32")  --&gt;
+&lt;!-- ``` --&gt;
+
+---
+
+class: center, middle
+
+# Multiple Plots
+
+---
+## Facet Wrapping
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = species, y = bill_length_mm)) +
+  geom_boxplot() +
+  facet_wrap(~sex)
+```
+
+```
+## Warning: Removed 2 rows containing non-finite values (stat_boxplot).
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-45-1.png)&lt;!-- --&gt;
+
+---
+
+
+
+```
+## Warning: Removed 2 rows containing non-finite values (stat_boxplot).
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-46-1.png)&lt;!-- --&gt;
+
+---
+## Patchwork
+
+
+```r
+library(patchwork)
+```
+
+```
+## Warning: package 'patchwork' was built under R version 4.0.5
+```
+
+```r
+box &lt;- penguins %&gt;%
+  ggplot(aes(x = species, y = bill_length_mm, fill = species)) +
+  geom_boxplot()
+
+dens &lt;- penguins %&gt;%
+  ggplot(aes(fill = species, x = bill_length_mm)) +
+  geom_density()
+```
+
+---
+
+
+```
+## Warning: Removed 2 rows containing non-finite values (stat_boxplot).
+```
+
+```
+## Warning: Removed 2 rows containing non-finite values (stat_density).
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-48-1.png)&lt;!-- --&gt;
+
+---
+
+
+```
+## Warning: Removed 2 rows containing non-finite values (stat_boxplot).
+```
+
+```
+## Warning: Removed 2 rows containing non-finite values (stat_density).
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-49-1.png)&lt;!-- --&gt;
+
+---
+
+
+```
+## Warning: Removed 2 rows containing non-finite values (stat_boxplot).
+```
+
+```
+## Warning: Removed 2 rows containing non-finite values (stat_density).
+```
+
+```
+## Warning: Removed 2 rows containing non-finite values (stat_boxplot).
+```
+
+![](01-Workflow_and_DataViz_files/figure-html/unnamed-chunk-50-1.png)&lt;!-- --&gt;
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
